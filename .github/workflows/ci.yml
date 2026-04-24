@@ -36,20 +36,15 @@ jobs:
     - name: Install Drogon dependencies
       run: |
         sudo apt update
-        sudo apt install -y libjsoncpp-dev uuid-dev libssl-dev zlib1g-dev libpq-dev
+        sudo apt install -y libjsoncpp-dev uuid-dev libssl-dev zlib1g-dev libpq-dev \
+                            libhiredis-dev libmariadb-dev
 
     - name: Build and install Drogon
       run: |
         git clone https://github.com/drogonframework/drogon.git
         cd drogon
         mkdir build && cd build
-        cmake .. \
-          -DBUILD_DOC=OFF \
-          -DBUILD_EXAMPLES=OFF \
-          -DBUILD_CTL=OFF \
-          -DBUILD_REDIS=OFF \
-          -DCMAKE_DISABLE_FIND_PACKAGE_Doxygen=ON \
-          -DCMAKE_DISABLE_FIND_PACKAGE_Hiredis=ON
+        cmake .. -DBUILD_DOC=OFF -DBUILD_EXAMPLES=OFF -DBUILD_CTL=OFF
         make -j$(nproc)
         sudo make install
 
