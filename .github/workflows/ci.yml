@@ -1,0 +1,66 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+env:
+  DB_NAME: ${{ secrets.DB_NAME }}
+  DB_USER: ${{ secrets.DB_USER }}
+  DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_DB: ${{ env.DB_NAME }}
+          POSTGRES_USER: ${{ env.DB_USER }}
+          POSTGRES_PASSWORD: ${{ env.DB_PASSWORD }}
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Install Drogon dependencies
+      run: |
+        sudo apt update
+        sudo apt install -y libjsoncpp-dev uuid-dev libssl-dev zlib1g-dev libpq-dev
+
+    - name: Build and install Drogon
+      run: |
+        git clone https://github.com/drogonframework/drogon.git
+        cd drogon
+        mkdir build && cd build
+        cmake .. && make -j$(nproc) && sudo make install
+
+    - name: Build the application
+      run: |
+        cd ${{ github.workspace }}
+        mkdir build && cd build
+        cmake .. && make -j$(nproc)
+
+    - name: Functional test
+      run: |
+        export DB_HOST=localhost DB_NAME=${{ env.DB_NAME }} DB_USER=${{ env.DB_USER }} DB_PASSWORD=${{ env.DB_PASSWORD }}
+        ${{ github.workspace }}/build/todo_app &
+        APP_PID=$!
+        sleep 5
+        # Health check
+        curl -f http://localhost:5000/health
+        # Create a task
+        curl -X POST -H "Content-Type: application/json" -d '{"title":"CI test"}' http://localhost:5000/api/tasks
+        # Verify it exists
+        curl -s http://localhost:5000/api/tasks | grep "CI test"
+        kill $APP_PID
