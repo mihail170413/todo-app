@@ -33,28 +33,11 @@ jobs:
     steps:
     - uses: actions/checkout@v3
 
-    - name: Install ALL Drogon dependencies (including Doxygen, Graphviz, Dia)
+    - name: Build the application inside Drogon Docker container
       run: |
-        sudo apt update
-        sudo apt install -y \
-          libjsoncpp-dev uuid-dev libssl-dev zlib1g-dev libpq-dev \
-          libhiredis-dev libmariadb-dev \
-          doxygen graphviz dia
-
-    - name: Build and install Drogon (full, no flags)
-      run: |
-        git clone https://github.com/drogonframework/drogon.git
-        cd drogon
-        mkdir build && cd build
-        cmake ..
-        make -j$(nproc)
-        sudo make install
-
-    - name: Build the application
-      run: |
-        cd ${{ github.workspace }}
-        mkdir -p build && cd build
-        cmake .. && make -j$(nproc)
+        docker run --rm -v "${{ github.workspace }}:/workspace" -w /workspace \
+          drogonframework/drogon:latest \
+          bash -c "mkdir -p build && cd build && cmake .. && make -j\$(nproc)"
 
     - name: Functional test
       run: |
