@@ -41,33 +41,32 @@ jobs:
 
     - name: Generate real config.json from template
       run: |
-        # Подставляем переменные окружения в шаблон
         envsubst < config.json.template > config.json
-        cat config.json  # для отладки
+        echo "Generated config.json:"
+        cat config.json
 
-    - name: Run functional test inside Drogon container
+    - name: Run functional test inside the same container
       run: |
-        # Запускаем приложение в контейнере Drogon с доступом к сети хоста
+        # Запускаем контейнер в фоне, с сетью хоста для доступа к PostgreSQL
         docker run -d --name todo-test \
           --network host \
           -v "${{ github.workspace }}:/workspace" \
           -w /workspace \
           drogonframework/drogon:latest \
           ./build/todo_app
-        
+
         # Ждём запуска
         sleep 5
-        
-        # Проверяем здоровье
-        curl -f http://localhost:5000/health
-        
-        # Создаём задачу
-        curl -X POST -H "Content-Type: application/json" \
-          -d '{"title":"CI test"}' \
-          http://localhost:5000/api/tasks
-        
-        # Проверяем, что задача создалась
-        curl -s http://localhost:5000/api/tasks | grep "CI test"
-        
-        # Останавливаем и удаляем контейнер
+
+        # Смотрим, жив ли контейнер и что в логах
+        docker ps -a --filter name=todo-test
+        docker logs todo-test
+
+        # Выполняем проверки прямо внутри контейнера (там точно есть curl и библиотеки)
+        docker exec todo-test curl -f http://localhost:5000/health
+        docker exec todo-test curl -X POST -H "Content-Type: application/json" \
+          -d '{"title":"CI test"}' http://localhost:5000/api/tasks
+        docker exec todo-test curl -s http://localhost:5000/api/tasks | grep "CI test"
+
+        # Очистка
         docker stop todo-test && docker rm todo-test
