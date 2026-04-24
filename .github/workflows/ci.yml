@@ -39,6 +39,11 @@ jobs:
           drogonframework/drogon:latest \
           bash -c "mkdir -p build && cd build && cmake .. && make -j\$(nproc)"
 
+    - name: Install runtime libraries for the binary
+      run: |
+        sudo apt update
+        sudo apt install -y libjsoncpp25 libpq5 libssl3 zlib1g uuid-runtime
+
     - name: Functional test
       run: |
         export DB_HOST=localhost DB_NAME=${{ env.DB_NAME }} DB_USER=${{ env.DB_USER }} DB_PASSWORD=${{ env.DB_PASSWORD }}
