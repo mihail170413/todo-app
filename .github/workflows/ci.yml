@@ -50,8 +50,7 @@ jobs:
           uuid-runtime \
           libmariadb3 \
           libc-ares2 \
-          libsqlite3-0 \
-          libhiredis0.14
+          libsqlite3-0
 
     - name: Functional test
       run: |
