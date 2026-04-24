@@ -39,27 +39,30 @@ jobs:
           drogonframework/drogon:latest \
           bash -c "mkdir -p build && cd build && cmake .. && make -j\$(nproc)"
 
-    - name: Run functional test (use service network)
+    - name: Generate real config.json on host
+      run: |
+        # Подставляем реальные переменные окружения в шаблон
+        envsubst < config.json.template > config.json
+        echo "Generated config.json:"
+        cat config.json
+
+    - name: Run functional test (use service network, ready config)
       env:
         NETWORK: ${{ job.services.postgres.network }}
       run: |
-        # Запускаем контейнер в той же сети, где postgres, и сразу генерируем config.json
+        # Запускаем контейнер в сети сервиса, монтируем готовый config.json
         docker run -d --name todo-test \
           --network "$NETWORK" \
           -v "${{ github.workspace }}:/workspace" \
           -w /workspace \
-          -e DB_HOST=postgres \
-          -e DB_NAME=${{ env.DB_NAME }} \
-          -e DB_USER=${{ env.DB_USER }} \
-          -e DB_PASSWORD=${{ env.DB_PASSWORD }} \
           drogonframework/drogon:latest \
-          bash -c "envsubst < config.json.template > config.json && exec ./build/todo_app"
+          ./build/todo_app
 
         sleep 5
         echo "=== Container logs ==="
         docker logs todo-test
 
-        # Все тесты выполняем внутри контейнера, где есть все библиотеки и сеть
+        # Все тесты выполняем внутри контейнера
         echo "=== Health check ==="
         docker exec todo-test curl -f http://localhost:5000/health
 
