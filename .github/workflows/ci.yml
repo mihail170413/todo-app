@@ -25,7 +25,7 @@ jobs:
         ports:
           - 5432:5432
         options: >-
-          --health-cmd pg_isready
+          --health-cmd "pg_isready -U postgres -h localhost"
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
@@ -43,7 +43,9 @@ jobs:
         git clone https://github.com/drogonframework/drogon.git
         cd drogon
         mkdir build && cd build
-        cmake .. && make -j$(nproc) && sudo make install
+        cmake .. -DBUILD_DOC=OFF -DBUILD_EXAMPLES=OFF -DBUILD_CTL=OFF
+        make -j$(nproc)
+        sudo make install
 
     - name: Build the application
       run: |
