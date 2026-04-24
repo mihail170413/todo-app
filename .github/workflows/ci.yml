@@ -39,26 +39,33 @@ jobs:
           drogonframework/drogon:latest \
           bash -c "mkdir -p build && cd build && cmake .. && make -j\$(nproc)"
 
-    - name: Install all required runtime libraries
+    - name: Run functional test inside Drogon container (all libraries present)
       run: |
-        sudo apt update
-        sudo apt install -y \
-          libjsoncpp25 \
-          libpq5 \
-          libssl3 \
-          zlib1g \
-          uuid-runtime \
-          libmariadb3 \
-          libc-ares2 \
-          libsqlite3-0
-
-    - name: Functional test
-      run: |
-        export DB_HOST=localhost DB_NAME=${{ env.DB_NAME }} DB_USER=${{ env.DB_USER }} DB_PASSWORD=${{ env.DB_PASSWORD }}
-        ${{ github.workspace }}/build/todo_app &
-        APP_PID=$!
+        # Запускаем приложение в контейнере Drogon, в фоне, с доступом к сети хоста
+        docker run -d --name todo-test \
+          --network host \
+          -v "${{ github.workspace }}:/workspace" \
+          -w /workspace \
+          -e DB_HOST=localhost \
+          -e DB_NAME=${{ env.DB_NAME }} \
+          -e DB_USER=${{ env.DB_USER }} \
+          -e DB_PASSWORD=${{ env.DB_PASSWORD }} \
+          drogonframework/drogon:latest \
+          ./build/todo_app
+        
+        # Ждём запуска
         sleep 5
+        
+        # Проверяем здоровье
         curl -f http://localhost:5000/health
-        curl -X POST -H "Content-Type: application/json" -d '{"title":"CI test"}' http://localhost:5000/api/tasks
+        
+        # Создаём задачу
+        curl -X POST -H "Content-Type: application/json" \
+          -d '{"title":"CI test"}' \
+          http://localhost:5000/api/tasks
+        
+        # Проверяем, что задача создалась
         curl -s http://localhost:5000/api/tasks | grep "CI test"
-        kill $APP_PID
+        
+        # Останавливаем и удаляем контейнер
+        docker stop todo-test && docker rm todo-test
