@@ -43,7 +43,13 @@ jobs:
         git clone https://github.com/drogonframework/drogon.git
         cd drogon
         mkdir build && cd build
-        cmake .. -DBUILD_DOC=OFF -DBUILD_EXAMPLES=OFF -DBUILD_CTL=OFF -DCMAKE_DISABLE_FIND_PACKAGE_Doxygen=ON
+        cmake .. \
+          -DBUILD_DOC=OFF \
+          -DBUILD_EXAMPLES=OFF \
+          -DBUILD_CTL=OFF \
+          -DBUILD_REDIS=OFF \
+          -DCMAKE_DISABLE_FIND_PACKAGE_Doxygen=ON \
+          -DCMAKE_DISABLE_FIND_PACKAGE_Hiredis=ON
         make -j$(nproc)
         sudo make install
 
