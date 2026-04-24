@@ -39,10 +39,19 @@ jobs:
           drogonframework/drogon:latest \
           bash -c "mkdir -p build && cd build && cmake .. && make -j\$(nproc)"
 
-    - name: Install runtime libraries for the binary
+    - name: Install all required runtime libraries
       run: |
         sudo apt update
-        sudo apt install -y libjsoncpp25 libpq5 libssl3 zlib1g uuid-runtime
+        sudo apt install -y \
+          libjsoncpp25 \
+          libpq5 \
+          libssl3 \
+          zlib1g \
+          uuid-runtime \
+          libmariadb3 \
+          libc-ares2 \
+          libsqlite3-0 \
+          libhiredis0.14
 
     - name: Functional test
       run: |
