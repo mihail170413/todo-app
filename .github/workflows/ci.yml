@@ -39,17 +39,19 @@ jobs:
           drogonframework/drogon:latest \
           bash -c "mkdir -p build && cd build && cmake .. && make -j\$(nproc)"
 
-    - name: Run functional test inside Drogon container (all libraries present)
+    - name: Generate real config.json from template
       run: |
-        # Запускаем приложение в контейнере Drogon, в фоне, с доступом к сети хоста
+        # Подставляем переменные окружения в шаблон
+        envsubst < config.json.template > config.json
+        cat config.json  # для отладки
+
+    - name: Run functional test inside Drogon container
+      run: |
+        # Запускаем приложение в контейнере Drogon с доступом к сети хоста
         docker run -d --name todo-test \
           --network host \
           -v "${{ github.workspace }}:/workspace" \
           -w /workspace \
-          -e DB_HOST=localhost \
-          -e DB_NAME=${{ env.DB_NAME }} \
-          -e DB_USER=${{ env.DB_USER }} \
-          -e DB_PASSWORD=${{ env.DB_PASSWORD }} \
           drogonframework/drogon:latest \
           ./build/todo_app
         
