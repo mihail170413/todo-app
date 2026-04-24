@@ -33,26 +33,27 @@ jobs:
     steps:
     - uses: actions/checkout@v3
 
-    - name: Install Drogon dependencies (including Doxygen and Graphviz)
+    - name: Install ALL Drogon dependencies (including Doxygen, Graphviz, Dia)
       run: |
         sudo apt update
-        sudo apt install -y libjsoncpp-dev uuid-dev libssl-dev zlib1g-dev libpq-dev \
-                            libhiredis-dev libmariadb-dev doxygen graphviz
+        sudo apt install -y \
+          libjsoncpp-dev uuid-dev libssl-dev zlib1g-dev libpq-dev \
+          libhiredis-dev libmariadb-dev \
+          doxygen graphviz dia
 
-    - name: Build and install Drogon
+    - name: Build and install Drogon (full, no flags)
       run: |
         git clone https://github.com/drogonframework/drogon.git
         cd drogon
         mkdir build && cd build
-        cmake .. -DBUILD_DOC=OFF -DBUILD_EXAMPLES=OFF -DBUILD_CTL=OFF \
-                 -DDOXYGEN_DOT_EXECUTABLE=/usr/bin/dot -DDOXYGEN_DIA_EXECUTABLE=/bin/true
+        cmake ..
         make -j$(nproc)
         sudo make install
 
     - name: Build the application
       run: |
         cd ${{ github.workspace }}
-        mkdir build && cd build
+        mkdir -p build && cd build
         cmake .. && make -j$(nproc)
 
     - name: Functional test
