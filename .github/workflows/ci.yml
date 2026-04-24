@@ -33,18 +33,19 @@ jobs:
     steps:
     - uses: actions/checkout@v3
 
-    - name: Install Drogon dependencies (including Doxygen to satisfy CMake)
+    - name: Install Drogon dependencies (including Doxygen and Graphviz)
       run: |
         sudo apt update
         sudo apt install -y libjsoncpp-dev uuid-dev libssl-dev zlib1g-dev libpq-dev \
-                            libhiredis-dev libmariadb-dev doxygen
+                            libhiredis-dev libmariadb-dev doxygen graphviz
 
     - name: Build and install Drogon
       run: |
         git clone https://github.com/drogonframework/drogon.git
         cd drogon
         mkdir build && cd build
-        cmake .. -DBUILD_DOC=OFF -DBUILD_EXAMPLES=OFF -DBUILD_CTL=OFF
+        cmake .. -DBUILD_DOC=OFF -DBUILD_EXAMPLES=OFF -DBUILD_CTL=OFF \
+                 -DDOXYGEN_DOT_EXECUTABLE=/usr/bin/dot -DDOXYGEN_DIA_EXECUTABLE=/bin/true
         make -j$(nproc)
         sudo make install
 
