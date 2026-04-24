@@ -39,34 +39,35 @@ jobs:
           drogonframework/drogon:latest \
           bash -c "mkdir -p build && cd build && cmake .. && make -j\$(nproc)"
 
-    - name: Generate real config.json from template
+    - name: Run functional test (use service network)
+      env:
+        NETWORK: ${{ job.services.postgres.network }}
       run: |
-        envsubst < config.json.template > config.json
-        echo "Generated config.json:"
-        cat config.json
-
-    - name: Run functional test inside the same container
-      run: |
-        # Запускаем контейнер в фоне, с сетью хоста для доступа к PostgreSQL
+        # Запускаем контейнер в той же сети, где postgres, и сразу генерируем config.json
         docker run -d --name todo-test \
-          --network host \
+          --network "$NETWORK" \
           -v "${{ github.workspace }}:/workspace" \
           -w /workspace \
+          -e DB_HOST=postgres \
+          -e DB_NAME=${{ env.DB_NAME }} \
+          -e DB_USER=${{ env.DB_USER }} \
+          -e DB_PASSWORD=${{ env.DB_PASSWORD }} \
           drogonframework/drogon:latest \
-          ./build/todo_app
+          bash -c "envsubst < config.json.template > config.json && exec ./build/todo_app"
 
-        # Ждём запуска
         sleep 5
-
-        # Смотрим, жив ли контейнер и что в логах
-        docker ps -a --filter name=todo-test
+        echo "=== Container logs ==="
         docker logs todo-test
 
-        # Выполняем проверки прямо внутри контейнера (там точно есть curl и библиотеки)
+        # Все тесты выполняем внутри контейнера, где есть все библиотеки и сеть
+        echo "=== Health check ==="
         docker exec todo-test curl -f http://localhost:5000/health
+
+        echo "=== Create task ==="
         docker exec todo-test curl -X POST -H "Content-Type: application/json" \
           -d '{"title":"CI test"}' http://localhost:5000/api/tasks
+
+        echo "=== Verify task ==="
         docker exec todo-test curl -s http://localhost:5000/api/tasks | grep "CI test"
 
-        # Очистка
         docker stop todo-test && docker rm todo-test
