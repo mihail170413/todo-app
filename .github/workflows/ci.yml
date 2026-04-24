@@ -39,18 +39,17 @@ jobs:
           drogonframework/drogon:latest \
           bash -c "mkdir -p build && cd build && cmake .. && make -j\$(nproc)"
 
-    - name: Generate real config.json on host
+    - name: Generate real config.json with correct DB_HOST
       run: |
-        # Подставляем реальные переменные окружения в шаблон
+        export DB_HOST=postgres
         envsubst < config.json.template > config.json
         echo "Generated config.json:"
         cat config.json
 
-    - name: Run functional test (use service network, ready config)
+    - name: Run functional test (network of postgres service)
       env:
         NETWORK: ${{ job.services.postgres.network }}
       run: |
-        # Запускаем контейнер в сети сервиса, монтируем готовый config.json
         docker run -d --name todo-test \
           --network "$NETWORK" \
           -v "${{ github.workspace }}:/workspace" \
@@ -62,7 +61,6 @@ jobs:
         echo "=== Container logs ==="
         docker logs todo-test
 
-        # Все тесты выполняем внутри контейнера
         echo "=== Health check ==="
         docker exec todo-test curl -f http://localhost:5000/health
 
